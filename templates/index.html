@@ -1,0 +1,1094 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>工程圖影像檢索系統</title>
+    <!-- Google Fonts for Modern Typography -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-color: #0b1120;
+        --panel-bg: rgba(15, 23, 42, 0.75);
+        --panel-border: rgba(255, 255, 255, 0.08);
+        --primary: #38bdf8;
+        --primary-hover: #0ea5e9;
+        --secondary: #818cf8;
+        --accent: #f472b6;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --success: #10b981; /* Emerald 500 */
+        --error: #ef4444; /* Red 500 */
+        --font-headings: "Outfit", sans-serif;
+        --font-body: "Inter", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: radial-gradient(
+          circle at top center,
+          #1e1b4b 0%,
+          var(--bg-color) 100%
+        );
+        color: var(--text-main);
+        font-family: var(--font-body);
+        min-height: 100vh;
+        line-height: 1.6;
+        overflow-x: hidden;
+      }
+
+      .glass {
+        background: var(--panel-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+        animation: fadeInDown 0.8s ease-out;
+      }
+
+      h1 {
+        font-family: var(--font-headings);
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--secondary),
+          var(--accent)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+      }
+
+      p.subtitle {
+        color: var(--text-muted);
+        font-size: 1.15rem;
+      }
+
+      /* Tab Navigation */
+      .tabs {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--panel-border);
+        padding-bottom: 1rem;
+      }
+
+      .tab-btn {
+        background: transparent;
+        color: var(--text-muted);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-size: 1.2rem;
+        font-family: var(--font-headings);
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .tab-btn:hover {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .tab-btn.active {
+        color: var(--primary);
+        background: rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+      }
+
+      .tab-content {
+        display: none;
+        animation: fadeIn 0.4s ease-out forwards;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      /* Panels */
+      .panel {
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+      .panel:hover {
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+        border-color: rgba(255, 255, 255, 0.15);
+      }
+
+      .panel-title {
+        font-family: var(--font-headings);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: #fff;
+      }
+
+      /* Forms & Inputs */
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        font-size: 0.95rem;
+        color: var(--text-main);
+      }
+      input[type="file"],
+      input[type="text"],
+      input[type="number"],
+      input[type="date"],
+      select {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        color: var(--text-main);
+        font-family: var(--font-body);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+      input[type="file"] {
+        padding: 0.6rem;
+        cursor: pointer;
+      }
+      input[type="file"]::file-selector-button {
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        border: none;
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-main);
+        font-weight: 600;
+        cursor: pointer;
+        margin-right: 1rem;
+        transition: all 0.2s;
+      }
+      input[type="file"]::file-selector-button:hover {
+        background: var(--primary);
+        color: #0f172a;
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+      }
+
+      .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+      .checkbox-wrapper:hover {
+        background: rgba(0, 0, 0, 0.3);
+      }
+      .checkbox-wrapper input[type="checkbox"] {
+        width: 1.2rem;
+        height: 1.2rem;
+        cursor: pointer;
+        accent-color: var(--primary);
+      }
+      .checkbox-wrapper label {
+        margin: 0;
+        cursor: pointer;
+        font-size: 1.05rem;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 1rem 1.5rem;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        font-family: var(--font-headings);
+        font-weight: 600;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .btn::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.2),
+          rgba(255, 255, 255, 0)
+        );
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .btn:hover::after {
+        opacity: 1;
+      }
+      .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(56, 189, 248, 0.5);
+      }
+      .btn:active {
+        transform: translateY(0);
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        filter: grayscale(1);
+      }
+
+      /* Progress Section */
+      .progress-container {
+        margin-top: 2rem;
+        display: none;
+      }
+      .step-list {
+        display: grid;
+        gap: 0.8rem;
+        margin-bottom: 1.5rem;
+      }
+      .step-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: rgba(0, 0, 0, 0.25);
+        padding: 1rem 1.2rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+      }
+      .step-item.active {
+        background: rgba(56, 189, 248, 0.1);
+        border-color: rgba(56, 189, 248, 0.3);
+        color: var(--text-main);
+        box-shadow: inset 0 0 15px rgba(56, 189, 248, 0.1);
+      }
+      .step-item.completed {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.3);
+        color: var(--text-main);
+      }
+      .step-item input[type="checkbox"] {
+        width: 1.4rem;
+        height: 1.4rem;
+        appearance: none;
+        border: 2px solid var(--text-muted);
+        border-radius: 4px;
+        outline: none;
+        position: relative;
+        cursor: default;
+        transition: all 0.3s;
+      }
+      .step-item.active input[type="checkbox"] {
+        border-color: var(--primary);
+      }
+      .step-item.completed input[type="checkbox"] {
+        background: var(--success);
+        border-color: var(--success);
+      }
+      .step-item.completed input[type="checkbox"]::after {
+        content: "";
+        position: absolute;
+        left: 6px;
+        top: 2px;
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+
+      .status-msg {
+        margin-top: 1rem;
+        font-size: 1.05rem;
+        display: flex;
+        justify-content: space-between;
+        font-weight: 500;
+      }
+      .ws-log {
+        margin-top: 1rem;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 8px;
+        padding: 1rem;
+        height: 150px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        border: 1px solid var(--panel-border);
+      }
+      .ws-log p {
+        margin-bottom: 0.4rem;
+        line-height: 1.4;
+      }
+      .success-text {
+        color: var(--success);
+      }
+      .error-text {
+        color: var(--error);
+      }
+
+      /* Two Column Layout for Search */
+      .search-layout {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+        align-items: start;
+      }
+      @media (max-width: 968px) {
+        .search-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      .row-group {
+        display: flex;
+        gap: 1rem;
+      }
+      .row-group .form-group {
+        flex: 1;
+      }
+
+      /* Results Grid */
+      .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      .loading-spinner {
+        display: none;
+        width: 48px;
+        height: 48px;
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 3rem auto;
+      }
+      @keyframes spin {
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .images-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.8rem;
+      }
+
+      .image-card {
+        background: rgba(15, 23, 42, 0.8);
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        position: relative;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        animation: fadeIn 0.5s ease-out forwards;
+        opacity: 0;
+        transform: translateY(20px);
+        cursor: pointer;
+      }
+
+      .image-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        border-color: var(--primary);
+      }
+
+      .card-img-wrapper {
+        width: 100%;
+        padding-top: 80%;
+        position: relative;
+        background: #000;
+        overflow: hidden;
+      }
+
+      .card-img-wrapper img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        transition: transform 0.6s cubic-bezier(0.2, 0, 0, 1);
+      }
+
+      .image-card:hover .card-img-wrapper img {
+        transform: scale(1.15);
+      }
+
+      .card-score {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(16, 185, 129, 0.2);
+        backdrop-filter: blur(8px);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--success);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        z-index: 2;
+      }
+
+      .card-body {
+        padding: 1.2rem;
+      }
+      .card-title {
+        font-family: var(--font-headings);
+        font-weight: 600;
+        font-size: 1.15rem;
+        margin-bottom: 0.5rem;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .card-meta {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        display: grid;
+        gap: 0.4rem;
+      }
+      .meta-item {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 0.3rem;
+      }
+      .meta-item:last-child {
+        border-bottom: none;
+      }
+      .meta-label {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      /* Lightbox */
+      .lightbox {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(8px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .lightbox.show {
+        display: flex;
+        opacity: 1;
+      }
+      .lightbox img {
+        max-width: 90vw;
+        max-height: 90vh;
+        border-radius: 8px;
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+        transform: scale(0.9);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .lightbox.show img {
+        transform: scale(1);
+      }
+      .lightbox-close {
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        color: white;
+        font-size: 2.5rem;
+        cursor: pointer;
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        transition: color 0.2s;
+      }
+      .lightbox-close:hover {
+        color: var(--error);
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>工程圖影像檢索系統</h1>
+        <p class="subtitle">
+          AI-Powered Engineering Drawing Search via SimSiam & ChromaDB
+        </p>
+      </header>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('upload-tab')">
+          資料庫建置與更新
+        </button>
+        <button class="tab-btn" onclick="switchTab('search-tab')">
+          工程圖檢索
+        </button>
+      </div>
+
+      <!-- Tab 1: Database Update -->
+      <div id="upload-tab" class="tab-content active">
+        <div class="panel glass" style="max-width: 800px; margin: 0 auto">
+          <h2 class="panel-title">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="color: var(--primary)"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            建立或更新索引庫
+          </h2>
+          <form id="uploadForm">
+            <div class="form-group">
+              <label>圖檔壓縮包 (.zip)</label>
+              <input type="file" id="zipFile" accept=".zip" required />
+            </div>
+            <div class="form-group">
+              <label>屬性明細表 (.csv, .xlsx)</label>
+              <input
+                type="file"
+                id="metaFile"
+                accept=".csv, .xls, .xlsx"
+                required
+              />
+            </div>
+            <button type="submit" class="btn" id="uploadBtn">
+              開始更新任務
+            </button>
+          </form>
+
+          <div class="progress-container" id="progressArea">
+            <h3
+              style="
+                margin-bottom: 1rem;
+                font-size: 1.2rem;
+                border-bottom: 1px solid var(--panel-border);
+                padding-bottom: 0.5rem;
+              "
+            >
+              任務處理進度
+            </h3>
+            <div class="step-list" id="stepList">
+              <div class="step-item" id="step-1">
+                <input type="checkbox" disabled /><span>1. 接收與初始化</span>
+              </div>
+              <div class="step-item" id="step-2">
+                <input type="checkbox" disabled /><span
+                  >2. 解壓縮與掃描嵌套結構</span
+                >
+              </div>
+              <div class="step-item" id="step-3">
+                <input type="checkbox" disabled /><span
+                  >3. 複製與 Hash 重新命名</span
+                >
+              </div>
+              <div class="step-item" id="step-4">
+                <input type="checkbox" disabled /><span
+                  >4. 解析 Metadata 屬性資料並配對</span
+                >
+              </div>
+              <div class="step-item" id="step-5">
+                <input type="checkbox" disabled /><span
+                  >5. 模型預測與 ROI 處理</span
+                >
+              </div>
+              <div class="step-item" id="step-6">
+                <input type="checkbox" disabled /><span>6. 更新 ChromaDB</span>
+              </div>
+              <div class="step-item" id="step-7">
+                <input type="checkbox" disabled /><span>7. 完成與資源清理</span>
+              </div>
+            </div>
+            <div class="status-msg">
+              <span id="progressText" style="color: var(--primary)"
+                >準備連接...</span
+              >
+              <span
+                id="progressPercent"
+                style="color: var(--text-muted); font-family: monospace"
+                >0%</span
+              >
+            </div>
+            <div class="ws-log" id="wsLog"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Retrieval -->
+      <div id="search-tab" class="tab-content">
+        <div class="search-layout">
+          <!-- Sidebar -->
+          <div class="panel glass">
+            <h2 class="panel-title" style="font-size: 1.5rem">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="color: var(--accent)"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              檢索設定
+            </h2>
+            <form id="searchForm">
+              <div class="form-group">
+                <label>上傳待檢索工程圖 (PDF)</label>
+                <input
+                  type="file"
+                  id="searchPdf"
+                  accept="application/pdf"
+                  required
+                />
+              </div>
+
+              <div class="row-group">
+                <div class="form-group">
+                  <label>返回數量 (Top K)</label>
+                  <input type="number" id="topK" value="10" min="1" max="50" />
+                </div>
+                <div class="form-group">
+                  <label>類別過濾 (選填)</label>
+                  <select id="catSelect">
+                    <option value="">所有類別</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>品號精確比對 (選填)</label>
+                <input type="text" id="partNum" placeholder="例如: YJUCVC0A" />
+              </div>
+
+              <div class="row-group">
+                <div class="form-group">
+                  <label>交易日起</label>
+                  <input type="date" id="startDate" />
+                </div>
+                <div class="form-group">
+                  <label>交易日迄</label>
+                  <input type="date" id="endDate" />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                class="btn"
+                id="searchBtn"
+                style="
+                  background: linear-gradient(
+                    135deg,
+                    var(--secondary),
+                    var(--accent)
+                  );
+                  margin-top: 1rem;
+                "
+              >
+                開始智慧檢索
+              </button>
+            </form>
+          </div>
+
+          <!-- Main Results Area -->
+          <div class="panel glass" style="min-height: 600px">
+            <div class="results-header">
+              <h2 class="panel-title" style="margin: 0">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="color: var(--success)"
+                >
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                  <polyline points="2 17 12 22 22 17"></polyline>
+                  <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+                檢索結果
+              </h2>
+              <span
+                id="resultStats"
+                style="
+                  color: var(--text-muted);
+                  font-size: 0.95rem;
+                  font-weight: 500;
+                "
+              ></span>
+            </div>
+
+            <div class="loading-spinner" id="loadingSpinner"></div>
+
+            <div class="images-grid" id="resultsGrid">
+              <div
+                style="
+                  grid-column: 1/-1;
+                  text-align: center;
+                  color: var(--text-muted);
+                  margin-top: 6rem;
+                  font-size: 1.1rem;
+                "
+              >
+                請於左側面板上傳 PDF 發起檢索，AI 將為您尋找相似的圖紙。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+      <span class="lightbox-close">&times;</span>
+      <img
+        id="lightbox-img"
+        src=""
+        alt="Zoomed Result"
+        onclick="event.stopPropagation()"
+      />
+    </div>
+
+    <script>
+      // Tab Switching Logic
+      function switchTab(tabId) {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((el) => el.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((el) => el.classList.remove("active"));
+        document.getElementById(tabId).classList.add("active");
+        event.currentTarget.classList.add("active");
+      }
+
+      // Lightbox Logic
+      function openLightbox(src) {
+        document.getElementById("lightbox-img").src = src;
+        document.getElementById("lightbox").classList.add("show");
+      }
+      function closeLightbox() {
+        document.getElementById("lightbox").classList.remove("show");
+        setTimeout(
+          () => (document.getElementById("lightbox-img").src = ""),
+          300,
+        );
+      }
+
+      // DOM Elements
+      const uploadForm = document.getElementById("uploadForm");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const progressArea = document.getElementById("progressArea");
+      const progressText = document.getElementById("progressText");
+      const progressPercent = document.getElementById("progressPercent");
+      const wsLog = document.getElementById("wsLog");
+      const searchForm = document.getElementById("searchForm");
+      const searchBtn = document.getElementById("searchBtn");
+      const resultsGrid = document.getElementById("resultsGrid");
+      const resultStats = document.getElementById("resultStats");
+      const loadingSpinner = document.getElementById("loadingSpinner");
+      const catSelect = document.getElementById("catSelect");
+
+      let currentWs = null;
+
+      async function loadCategories() {
+        try {
+          catSelect.innerHTML = '<option value="">所有類別</option>';
+          const res = await fetch("/api/v1/categories");
+          if (res.ok) {
+            const data = await res.json();
+            data.categories.forEach((cat) => {
+              const opt = document.createElement("option");
+              opt.value = cat;
+              opt.textContent = cat;
+              catSelect.appendChild(opt);
+            });
+          }
+        } catch (e) {
+          console.error("Failed to load categories", e);
+        }
+      }
+      window.onload = loadCategories;
+
+      function appendLog(msg, type = "normal") {
+        const p = document.createElement("p");
+        p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        if (type === "error") p.className = "error-text";
+        if (type === "success") p.className = "success-text";
+        wsLog.appendChild(p);
+        wsLog.scrollTop = wsLog.scrollHeight;
+      }
+
+      // WebSocket Connection
+      function connectWebSocket(taskId) {
+        if (currentWs) currentWs.close();
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/ws/v1/update/${taskId}?task_id=${taskId}`;
+
+        currentWs = new WebSocket(wsUrl);
+        currentWs.onopen = () =>
+          appendLog("WebSocket 連線已建立，等待任務開始...", "success");
+
+        currentWs.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          const currentStep = data.step;
+
+          progressText.textContent = data.step_name;
+          progressPercent.textContent = `${data.progress_percent}%`;
+
+          // Handle Checkboxes correctly
+          for (let i = 1; i <= 7; i++) {
+            const stepEl = document.getElementById(`step-${i}`);
+            const checkbox = stepEl.querySelector('input[type="checkbox"]');
+
+            if (i < currentStep) {
+              stepEl.className = "step-item completed";
+              checkbox.checked = true;
+            } else if (i === currentStep) {
+              if (data.status === "error") {
+                stepEl.className = "step-item error";
+                checkbox.checked = false;
+              } else if (
+                data.status === "success" ||
+                data.progress_percent >= 100
+              ) {
+                stepEl.className = "step-item completed";
+                checkbox.checked = true;
+              } else {
+                stepEl.className = "step-item active";
+                checkbox.checked = false;
+              }
+            } else {
+              stepEl.className = "step-item";
+              checkbox.checked = false;
+            }
+          }
+
+          appendLog(data.message);
+
+          if (data.status === "error") {
+            progressText.innerHTML = `<span class="error-text">發生錯誤</span>`;
+            uploadBtn.disabled = false;
+            currentWs.close();
+          } else if (currentStep === 7 && data.status === "success") {
+            progressText.innerHTML = `<span class="success-text">任務完成</span>`;
+            progressPercent.textContent = "100%";
+            uploadBtn.disabled = false;
+            appendLog("背景索引任務已結束。", "success");
+            loadCategories();
+            currentWs.close();
+          }
+        };
+
+        currentWs.onerror = () => appendLog("WebSocket 發生錯誤", "error");
+        currentWs.onclose = () => appendLog("WebSocket 連線已關閉");
+      }
+
+      // Upload Logic
+      uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const zipFile = document.getElementById("zipFile").files[0];
+        const metaFile = document.getElementById("metaFile").files[0];
+
+        const formData = new FormData();
+        formData.append("images_zip", zipFile);
+        formData.append("metadata_file", metaFile);
+
+        uploadBtn.disabled = true;
+        progressArea.style.display = "block";
+        wsLog.innerHTML = "";
+        progressText.textContent = "發送請求中...";
+        progressPercent.textContent = "0%";
+
+        for (let i = 1; i <= 7; i++) {
+          const stepEl = document.getElementById(`step-${i}`);
+          stepEl.className = "step-item";
+          stepEl.querySelector('input[type="checkbox"]').checked = false;
+        }
+
+        try {
+          const res = await fetch("/api/v1/dataset/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          if (res.ok) {
+            appendLog(`任務已建立 ID: ${data.task_id}`, "success");
+            setTimeout(() => connectWebSocket(data.task_id), 300);
+          } else {
+            throw new Error(data.detail || "上傳失敗");
+          }
+        } catch (err) {
+          appendLog(err.message, "error");
+          uploadBtn.disabled = false;
+          progressText.innerHTML = `<span class="error-text">API 錯誤</span>`;
+        }
+      });
+
+      // Search Logic
+      searchForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const pdfFile = document.getElementById("searchPdf").files[0];
+        const conds = {};
+
+        const type = document.getElementById("catSelect").value;
+        const part_number = document.getElementById("partNum").value;
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
+
+        if (type) conds.type = type;
+        if (part_number) conds.part_number = part_number;
+        if (startDate) conds.startDate = startDate;
+        if (endDate) conds.endDate = endDate;
+
+        const formData = new FormData();
+        formData.append("file", pdfFile);
+        formData.append("k", document.getElementById("topK").value);
+        if (Object.keys(conds).length > 0)
+          formData.append("conds", JSON.stringify(conds));
+
+        searchBtn.disabled = true;
+        resultsGrid.innerHTML = "";
+        resultStats.textContent = "搜尋中...";
+        loadingSpinner.style.display = "block";
+
+        try {
+          const res = await fetch("/api/v1/retrieval", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          if (res.ok) renderResults(data);
+          else throw new Error(data.detail || "檢索失敗");
+        } catch (err) {
+          resultsGrid.innerHTML = `<div style="grid-column:1/-1; color:var(--error); text-align:center;">檢索發生錯誤: ${err.message}</div>`;
+          resultStats.textContent = "發生錯誤";
+        } finally {
+          searchBtn.disabled = false;
+          loadingSpinner.style.display = "none";
+        }
+      });
+
+      function renderResults(data) {
+        resultStats.textContent = `耗時: ${data.process_time_sec.toFixed(2)}s | 找到 ${data.manifest.length} 筆相似結果`;
+        if (data.manifest.length === 0) {
+          resultsGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); margin-top:4rem;">未找到符合條件的圖紙。</div>`;
+          return;
+        }
+
+        data.manifest.forEach((item, index) => {
+          const card = document.createElement("div");
+          card.className = "image-card";
+          card.style.animationDelay = `${index * 0.08}s`;
+          // Attach click to open lightbox
+          card.onclick = () => openLightbox(item.path);
+
+          card.innerHTML = `
+            <div class="card-score">${(item.similarity * 100).toFixed(1)}% Match</div>
+            <div class="card-img-wrapper">
+                <img src="${item.path}" alt="${item.name}" loading="lazy" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZmlsbD0iIzY2NiIgZm9udC1zaXplPSIyMCIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2UgTm90IEZvdW5kPC90ZXh0Pjwvc3ZnPg=='" />
+            </div>
+            <div class="card-body">
+                <div class="card-title" title="${item.name}">${item.name}</div>
+                <div class="card-meta">
+                    <div class="meta-item"><span class="meta-label">品名規格:</span> <span>${item.type || "-"}</span></div>
+                    <div class="meta-item"><span class="meta-label">品號:</span> <span title="${item.part_number}">${item.part_number || "-"}</span></div>
+                    <div class="meta-item"><span class="meta-label">番數:</span> <span>${item.version || "-"}</span></div>
+                    <div class="meta-item"><span class="meta-label">最後異動日:</span> <span>${item.transaction_date || "-"}</span></div>
+                </div>
+            </div>
+          `;
+          resultsGrid.appendChild(card);
+        });
+      }
+    </script>
+  </body>
+</html>

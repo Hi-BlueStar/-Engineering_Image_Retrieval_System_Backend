@@ -1,0 +1,69 @@
+[project]
+name = "engineering-image-retrieval-system-backend"
+version = "0.1.0"
+description = "engineering-image-retrieval-system-backend"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.129.0",
+    "jinja2>=3.1.6",
+    "pydantic>=2.12.5",
+    "uvicorn[standard]>=0.41.0",
+    "websockets>=16.0",
+    "pymupdf>=1.23.0",
+    "chromadb>=0.4.15",
+    "numpy>=1.24.0",
+    "opencv-python-headless>=4.8.0",
+    "pillow>=10.0.0",
+    "tqdm>=4.66.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "onnxruntime<1.17.0",
+    "matplotlib>=3.10.8",
+    "python-multipart>=0.0.22",
+    "pandas>=2.3.3",
+    "openpyxl>=3.1.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# 如果使用 hatchling，通常不需要額外設定 src，它會自動偵測
+# 但若偵測失敗，可顯式指定：
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src",
+    "src/model",
+    "src/data_analysis",
+]
+
+# === UV Workspaces 設定 ===
+[tool.uv.workspace]
+# members = ["src/*"]  # ["apps/*", "packages/*"]
+
+# === Ruff 統一設定 (所有 Python 專案共用) ===
+[tool.ruff]
+line-length = 80
+target-version = "py310"
+src = ["src/*"]  # ["apps", "packages"] # 讓 ruff 知道源碼在哪，幫助 import 解析
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (Import 排序)
+    "B",   # flake8-bugbear (發現潛在 bug)
+    "UP",  # pyupgrade (語法升級)
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["core_utils", "protocol"] # 讓工具知道哪些是內部套件
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.1",
+]

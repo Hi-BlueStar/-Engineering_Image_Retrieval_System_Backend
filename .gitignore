@@ -1,0 +1,33 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+*__pycache__/
+.ruff_cache/
+
+# Virtual environments
+.venv
+
+# Project
+chroma_db/
+data/
+default.conf/
+model/
+static/
+
+temp/
+uploads/
+
+規劃.drawio
+AI圖檔明細表*
+AI圖檔明細表.xlsx
+load_test_retrieval.py
+note.md
+output.log
+*not_used/
+*old/
+*BackUp/
+*demo/

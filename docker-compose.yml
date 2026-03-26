@@ -1,0 +1,46 @@
+services:
+  # Nginx 作為反向代理與 API 閘道器
+  nginx:
+    image: nginx:alpine
+    container_name: gateway_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      # 將本地的 nginx 設定檔掛載至容器內部
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+  
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: engineering_image_retrieval_system_backend:v1.0
+    container_name: engineering_image_retrieval_system_backend
+    restart: unless-stopped
+    expose:
+      - "8002"
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8002"]
+    ports:
+      - "8002:8002"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    volumes:
+      # 掛載原始碼
+      - ./:/workspace
+      # 【重要技巧】為了防止本地的 .venv 汙染容器，或者容器的操作汙染本地
+      # 我們可以使用匿名 Volume 遮蔽它，或者在 .dockerignore 排除。
+      # 由於我們設定了 UV_PROJECT_ENVIRONMENT，即使掛載了也無妨，
+      # 但為了乾淨，建議不要在本地保留 .venv，或使用下方這行遮蔽：
+      # - /workspace/.venv
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all

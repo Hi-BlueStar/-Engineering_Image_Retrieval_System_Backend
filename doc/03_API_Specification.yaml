@@ -1,0 +1,210 @@
+openapi: 3.0.3
+info:
+  title: Engineering Image Retrieval System API
+  description: |-
+    本 API 規範定義了工程圖紙影像檢索系統的後端介面。
+    涵蓋了核心的非同步圖紙分析 (PDF)、檢索進度輪詢與檢索結果查詢。
+    針對目前的 WebSocket 實作，我們提出此 RESTful 標準化的升級設計。
+  version: 1.0.0
+  contact:
+    name: System Architecture Team
+servers:
+  - url: http://localhost:8001
+    description: 開發環境伺服器
+tags:
+  - name: Retrieval
+    description: 工程圖紙檢索與特徵萃取相關端點
+
+paths:
+  /api/v1/retrieval/upload:
+    post:
+      tags:
+        - Retrieval
+      summary: 上傳工程圖進行非同步檢索
+      description: |-
+        接收使用者上傳的工程圖 (現階段支援 PDF 或圖片)，將工作丟入背景佇列 (Worker Queue) 中進行處理。
+        此端點為非阻塞式，回傳專屬的 Task ID 供後續輪詢 (Polling) 或 WebSocket 訂閱使用。
+      operationId: uploadEngineeringDrawing
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 要上傳解析的工程圖檔案 (支援 .pdf)
+              required:
+                - file
+      responses:
+        '202':
+          description: 檔案接收成功，已建立背景檢索任務。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCreatedResponse'
+              example:
+                task_id: "task-550e8400-e29b-41d4-a716-446655440000"
+                status: "starting"
+                message: "檔案已收妥，放入背景佇列中。"
+        '400':
+          description: 用戶端輸入錯誤 (例如未上傳檔案或格式不符)。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 400
+                message: "未支援的檔案格式，請上傳 PDF。"
+        '500':
+          description: 系統內部服務錯誤。
+
+  /api/v1/retrieval/tasks/{task_id}:
+    get:
+      tags:
+        - Retrieval
+      summary: 取得檢索任務的最新狀態與進度
+      description: |-
+        依據上傳時獲取的 `task_id`，查詢目前的工作進度 (progress: 0.0 ~ 1.0)。
+        若任務已完成 (status: `completed`)，此端點將會在 `result` 中直接回傳詳細的檢索配對結果列表。
+        **(註：此服務可作為降級相容 HTTP 長輪詢，即時推送請搭配 WebSocket /ws 實作並以 task_id 為頻道)**
+      operationId: getTaskStatus
+      parameters:
+        - name: task_id
+          in: path
+          description: 系統生成的唯一任務識別碼 (UUID)
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功取得狀態 (包含完成時的結果回傳)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessingStatus'
+              examples:
+                processing:
+                  summary: 任務處理中
+                  value:
+                    status: "processing"
+                    message: "Processing Page 1/5..."
+                    progress: 0.5
+                    result: null
+                completed:
+                  summary: 任務已完成，包含檢索結果
+                  value:
+                    status: "completed"
+                    message: "Search completed."
+                    progress: 1.0
+                    result:
+                      - parent_pdf_id: "drawing_v2_105.pdf"
+                        relevance_score: 8.94
+                        matched_component_count: 3
+                        path: "./outputs/matched_01.png"
+        '404':
+          description: 找不到對應的背景任務。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RetrievalResult:
+      type: object
+      description: 單一圖紙頁面或元件匹配的檢索結果
+      required:
+        - parent_pdf_id
+        - relevance_score
+        - matched_component_count
+      properties:
+        parent_pdf_id:
+          type: string
+          description: 歷史庫中匹配到的來源工程圖檔案結構名稱。
+          example: "arch_diagram_Q3.pdf"
+        relevance_score:
+          type: number
+          format: float
+          description: 余弦相似度或歐式距離等演算法所歸一化產生的分數。
+          example: 0.95
+        matched_component_count:
+          type: integer
+          description: 單張歷史圖片中命中的內部元件總數 (Top N 過濾後之實體)。
+          example: 5
+        path:
+          type: string
+          nullable: true
+          description: 原檔案/目標檔案在系統伺服器上的實體影像存取路徑（若系統允許）。
+          example: "/data/outputs/matched/arch_diagram_Q3.png"
+
+    ProcessingStatus:
+      type: object
+      description: 核心業務即時運作中的狀態封裝模型
+      required:
+        - status
+        - message
+        - progress
+      properties:
+        status:
+          type: string
+          enum: [starting, processing, completed, error]
+          description: 當前進度狀態。
+        message:
+          type: string
+          description: 詳細狀態文字，可供前端吐出 Toast 或提示訊息。
+          example: "Converting PDF to Image..."
+        progress:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: 0 到 1 之間的完成比例代表值。
+          example: 0.4
+        result:
+          type: array
+          nullable: true
+          description: 任務抵達 completed 狀態時由核心檢索引擎產出的結果。
+          items:
+            $ref: '#/components/schemas/RetrievalResult'
+
+    TaskCreatedResponse:
+      type: object
+      required:
+        - task_id
+        - status
+        - message
+      properties:
+        task_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      description: 團隊統一規範的系統級錯誤回覆結構
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: HTTP Status 或者是對應的業務例外代碼 (Business Error Code)
+          example: 400
+        message:
+          type: string
+          description: 安全並易於理解之錯誤訊息內容。
+          example: "Invalid input parameters provided."
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: (未來升級建議) API 操作需攜帶憑證以防範未授權存取。
