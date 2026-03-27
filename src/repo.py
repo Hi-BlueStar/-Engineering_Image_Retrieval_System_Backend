@@ -54,24 +54,30 @@ class MetadataRepository:
             import re
             df.columns = [re.sub(r'\s+', '', str(col)).strip() for col in df.columns]
 
-            # 尋找與交易日、異動日相關的欄位
-            date_col = next(
-                (col for col in df.columns if "交易日" in col or "異動" in col), 
-                None
-            )
+            # 尋找與交易日、異動日相關的所有欄位
+            target_keywords = ["最後交易日", "最後異動日", "交易日", "異動日", "異動日期"]
+            date_cols = [col for col in df.columns if any(keyword in col for keyword in target_keywords)]
 
-            # 轉換 "最後交易日/最後異動日" 從 月/日/年 至 YYYY/MM/DD
-            if date_col:
-                # 統一內部鍵名為 "最後交易日/最後異動日"
-                if date_col != "最後交易日/最後異動日":
-                    df.rename(columns={date_col: "最後交易日/最後異動日"}, inplace=True)
-                
+            standard_name = "最後交易日/最後異動日"
+            if date_cols:
+                # 建立標準欄位，由所有符合條件的欄位按優先順序（或非空值）合併而成
+                # 使用 bfill 合併所有日期欄位，優先取最前面非空的
+                df[standard_name] = df[date_cols].bfill(axis=1).iloc[:, 0] if not df[date_cols].empty else None
+
+                # 轉換 "最後交易日/最後異動日" 從 月/日/年 至 YYYY/MM/DD
                 dt_series = pd.to_datetime(
-                    df["最後交易日/最後異動日"], format="mixed", errors="coerce"
+                    df[standard_name], format="mixed", errors="coerce"
                 )
-                df["最後交易日/最後異動日"] = dt_series.dt.strftime("%Y/%m/%d")
-                # 建立供查詢用的整數欄位，處理空值為 0
-                df["transaction_date_int"] = dt_series.dt.strftime("%Y%m%d").fillna("0").astype(int)
+
+                invalid_dates = df[standard_name][dt_series.isna() & df[standard_name].notna()]
+                if not invalid_dates.empty:
+                    logging.warning(f"發現 {len(invalid_dates)} 筆無法解析的時間資料。")
+
+                df[standard_name] = dt_series.dt.strftime("%Y/%m/%d")
+                # 建立供查詢用的整數欄位，直接填補數值 0 再轉型
+                df["transaction_date_int"] = pd.to_numeric(
+                    dt_series.dt.strftime("%Y%m%d"), errors="coerce"
+                ).fillna(0).astype(int)
 
             # 確保 NaN 轉為 None，避免 JSON 序列化問題
             df = df.where(pd.notnull(df), None)
