@@ -58,6 +58,13 @@ class MetadataRepository:
             target_keywords = ["最後交易日", "最後異動日", "交易日", "異動日", "異動日期"]
             date_cols = [col for col in df.columns if any(keyword in col for keyword in target_keywords)]
 
+            # 尋找與番數、番號、版本相關的所有欄位
+            version_keywords = ["番數", "番號", "版本"]
+            version_cols = [col for col in df.columns if any(keyword in col for keyword in version_keywords)]
+            standard_version_name = "番數"
+            if version_cols:
+                df[standard_version_name] = df[version_cols].bfill(axis=1).iloc[:, 0] if not df[version_cols].empty else None
+
             standard_name = "最後交易日/最後異動日"
             if date_cols:
                 # 建立標準欄位，由所有符合條件的欄位按優先順序（或非空值）合併而成

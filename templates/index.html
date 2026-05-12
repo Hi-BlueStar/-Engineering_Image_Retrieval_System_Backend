@@ -741,9 +741,15 @@
                 </div>
               </div>
 
-              <div class="form-group">
-                <label>品號精確比對 (選填)</label>
-                <input type="text" id="partNum" placeholder="例如: YJUCVC0A" />
+              <div class="row-group">
+                <div class="form-group">
+                  <label>品號精確比對 (選填)</label>
+                  <input type="text" id="partNum" placeholder="例如: YJUCVC0A" />
+                </div>
+                <div class="form-group">
+                  <label>番數/番號 (選填)</label>
+                  <input type="text" id="versionNum" placeholder="例如: 01" />
+                </div>
               </div>
 
               <div class="row-group">
@@ -1021,11 +1027,13 @@
 
         const type = document.getElementById("catSelect").value;
         const part_number = document.getElementById("partNum").value;
+        const version = document.getElementById("versionNum").value;
         const startDate = document.getElementById("startDate").value;
         const endDate = document.getElementById("endDate").value;
 
         if (type) conds.type = type;
         if (part_number) conds.part_number = part_number;
+        if (version) conds.version = version;
         if (startDate) conds.startDate = startDate;
         if (endDate) conds.endDate = endDate;
 

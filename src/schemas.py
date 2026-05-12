@@ -35,6 +35,7 @@ class RetrievalConditions(BaseModel):
 
     type: str | None = Field(None, description="工程圖類別(品名規格)過濾")
     part_number: str | None = Field(None, description="品號模糊搜尋或精確比對")
+    version: str | None = Field(None, description="番數(版本)過濾")
     similarity: list[float] | None = Field(
         None, description="相似度閾值區間 [min, max]"
     )

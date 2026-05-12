@@ -12,6 +12,7 @@ import hashlib
 import io
 import logging
 import shutil
+import uuid
 import zipfile
 from collections import defaultdict
 from pathlib import Path
@@ -171,29 +172,47 @@ async def process_dataset_background(
             10,
             "正在解壓縮 ZIP 檔案並掃描目錄...",
         )
-        with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zip_ref:
-            for member in zip_ref.namelist():
-                if (
-                    member.endswith("/")
-                    or "__MACOSX" in member
-                    or ".DS_Store" in member
-                ):
-                    continue
-                if not member.lower().endswith(".pdf"):
-                    continue
-                member_path = Path(member)
-                target_path = tmp_dir / member_path.name
-                debug_log(f"解壓縮檔案: {member}")
-                try:
-                    with (
-                        zip_ref.open(member) as source,
-                        open(target_path, "wb") as target,
+        async def extract_zip_recursively(z_bytes: bytes, current_zip_name: str = "root.zip"):
+            with zipfile.ZipFile(io.BytesIO(z_bytes), "r") as zip_ref:
+                for member in zip_ref.namelist():
+                    if (
+                        member.endswith("/")
+                        or "__MACOSX" in member
+                        or ".DS_Store" in member
                     ):
-                        shutil.copyfileobj(source, target)
-                    await asyncio.sleep(0)  # Yield to event loop
-                except Exception as e:
-                    logger.warning(f"跳過損壞的檔案 {member}: {e}")
-                    continue
+                        continue
+                        
+                    lower_member = member.lower()
+                    if lower_member.endswith(".pdf"):
+                        member_path = Path(member)
+                        target_path = tmp_dir / member_path.name
+                        
+                        # 避免嵌套 zip 中有同名檔案互相覆蓋
+                        if target_path.exists():
+                            target_path = tmp_dir / f"{member_path.stem}_{uuid.uuid4().hex[:6]}{member_path.suffix}"
+                            
+                        debug_log(f"解壓縮檔案: {member} (來自 {current_zip_name})")
+                        try:
+                            with (
+                                zip_ref.open(member) as source,
+                                open(target_path, "wb") as target,
+                            ):
+                                shutil.copyfileobj(source, target)
+                            await asyncio.sleep(0)  # Yield to event loop
+                        except Exception as e:
+                            logger.warning(f"跳過損壞的檔案 {member}: {e}")
+                            
+                    elif lower_member.endswith(".zip"):
+                        debug_log(f"發現嵌套 ZIP 檔案: {member} (來自 {current_zip_name})，正在解析...")
+                        try:
+                            with zip_ref.open(member) as source:
+                                nested_z_bytes = source.read()
+                            await extract_zip_recursively(nested_z_bytes, member)
+                            await asyncio.sleep(0)
+                        except Exception as e:
+                            logger.warning(f"跳過損壞的嵌套 ZIP 檔案 {member}: {e}")
+
+        await extract_zip_recursively(zip_bytes)
 
         all_pdfs = list(tmp_dir.glob("*.pdf"))
         total_pdfs = len(all_pdfs)
@@ -523,6 +542,9 @@ class RetrievalService:
             # Note: ChromaDB doesn't natively support substring search well in `where`,
             # usually relies on string exact match. We implement an exact match for simple query.
             filters.append({"part_number": {"$eq": conds.part_number}})
+
+        if conds.version:
+            filters.append({"version": {"$eq": conds.version}})
 
         # Date Filtering (Use transaction_date_int for int range queries)
         def parse_date_to_int(d_str: str) -> int:
