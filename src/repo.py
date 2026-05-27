@@ -9,6 +9,8 @@ import logging
 from typing import Any
 
 import pandas as pd
+# 解決 FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is deprecated
+pd.set_option('future.no_silent_downcasting', True)
 from src.vector_search.database import ChromaDBManager
 
 logger = logging.getLogger(__name__)
@@ -63,13 +65,13 @@ class MetadataRepository:
             version_cols = [col for col in df.columns if any(keyword in col for keyword in version_keywords)]
             standard_version_name = "番數"
             if version_cols:
-                df[standard_version_name] = df[version_cols].bfill(axis=1).iloc[:, 0] if not df[version_cols].empty else None
+                df[standard_version_name] = df[version_cols].bfill(axis=1).infer_objects(copy=False).iloc[:, 0] if not df[version_cols].empty else None
 
             standard_name = "最後交易日/最後異動日"
             if date_cols:
                 # 建立標準欄位，由所有符合條件的欄位按優先順序（或非空值）合併而成
                 # 使用 bfill 合併所有日期欄位，優先取最前面非空的
-                df[standard_name] = df[date_cols].bfill(axis=1).iloc[:, 0] if not df[date_cols].empty else None
+                df[standard_name] = df[date_cols].bfill(axis=1).infer_objects(copy=False).iloc[:, 0] if not df[date_cols].empty else None
 
                 # 轉換 "最後交易日/最後異動日" 從 月/日/年 至 YYYY/MM/DD
                 dt_series = pd.to_datetime(
@@ -78,7 +80,7 @@ class MetadataRepository:
 
                 invalid_dates = df[standard_name][dt_series.isna() & df[standard_name].notna()]
                 if not invalid_dates.empty:
-                    logging.warning(f"發現 {len(invalid_dates)} 筆無法解析的時間資料。")
+                    logging.warning(f"發現 {len(invalid_dates)} 筆無法解析的時間資料。異常內容包含: {invalid_dates.unique()}")
 
                 df[standard_name] = dt_series.dt.strftime("%Y/%m/%d")
                 # 建立供查詢用的整數欄位，直接填補數值 0 再轉型

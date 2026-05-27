@@ -78,36 +78,40 @@ class UnlabeledImages(Dataset):
 # -----------------------------------------------------------------------------
 # 2. SimSiam 模型架構 (Model Architecture)
 # -----------------------------------------------------------------------------
-
 def _mlp(
     in_dim: int,
     hidden_dim: int,
     out_dim: int,
+    num_layers: int = 2,
     bn_last: bool = True,
     dropout: float = 0.0,
 ) -> nn.Sequential:
-    """輔助函數：建立多層感知機 (MLP) 區塊。
-
-    通常用於 Projector 或 Predictor。結構為 Linear -> BN -> ReLU -> ...
+    """建立多層 MLP 區塊。
 
     Args:
         in_dim: 輸入維度。
         hidden_dim: 隱藏層維度。
         out_dim: 輸出維度。
+        num_layers: 總層數。
         bn_last: 最後一層是否加 BatchNorm。
-        dropout: 第一層後的 Dropout 比率。
+        dropout: 每層隱藏層後的 Dropout 比率。
 
     Returns:
-        nn.Sequential: 構建好的 MLP 模型。
+        nn.Sequential: MLP 模組。
     """
-    layers = [
-        nn.Linear(in_dim, hidden_dim, bias=False),
-        nn.BatchNorm1d(hidden_dim),
-        nn.ReLU(inplace=True),
-    ]
-    if dropout > 0:
-        layers.append(nn.Dropout(dropout))
-    layers += [nn.Linear(hidden_dim, out_dim, bias=False)]
+    layers: list[nn.Module] = []
+    current_dim = in_dim
+    for _ in range(num_layers - 1):
+        layers.extend([
+            nn.Linear(current_dim, hidden_dim, bias=False),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(inplace=True),
+        ])
+        if dropout > 0:
+            layers.append(nn.Dropout(dropout))
+        current_dim = hidden_dim
+
+    layers.append(nn.Linear(current_dim, out_dim, bias=False))
     if bn_last:
         layers.append(nn.BatchNorm1d(out_dim, affine=True))
     return nn.Sequential(*layers)
@@ -129,6 +133,7 @@ class SimSiam(nn.Module):
         self,
         backbone: str = "resnet18",
         proj_dim: int = 2048,
+        proj_hidden: int | None = None,
         pred_hidden: int = 512,
         dropout: float = 0.0,
         pretrained: bool = False,
@@ -148,12 +153,12 @@ class SimSiam(nn.Module):
 
         # 1. 建立 Backbone
         if backbone == "resnet18":
-            net = models.resnet18(
+            backbone = models.resnet18(
                 weights=models.ResNet18_Weights.\
                     IMAGENET1K_V1 if pretrained else None
             )
         elif backbone == "resnet50":
-            net = models.resnet50(
+            backbone = models.resnet50(
                 weights=models.ResNet50_Weights.\
                     IMAGENET1K_V1 if pretrained else None
             )
@@ -164,7 +169,7 @@ class SimSiam(nn.Module):
         if in_channels != 3:
             # ResNet 的 conv1 原始結構是 (64, 3, 7, 7, stride=2, padding=3)，
             # 需改為 (64, in_channels, 7, 7)
-            old_conv = net.conv1
+            old_conv = backbone.conv1
             new_conv = nn.Conv2d(
                 in_channels,
                 old_conv.out_channels,
@@ -184,25 +189,34 @@ class SimSiam(nn.Module):
                         keepdim=True
                     ) / 3.0
 
-            net.conv1 = new_conv
+            backbone.conv1 = new_conv
 
         # 取得 Backbone 輸出特徵維度 (ResNet50 為 2048, ResNet18 為 512)
-        feat_dim = net.fc.in_features
+        feat_dim = backbone.fc.in_features
+
+
         # 移除原始分類用的全連接層 (fc)
-        net.fc = nn.Identity()
-        self.backbone = net
+        backbone.fc = nn.Identity()
+        self.backbone = backbone
 
         # 2. 建立 Projector (投影頭)
         # SimSiam 論文建議 Projector 為 3 層 MLP，
         #     此處簡化為 2 層或依照 _mlp 實作
         # 輸入: feat_dim -> 隱藏: 2048 -> 輸出: proj_dim
+        print("feat_dim:", feat_dim)
+        print("proj_hidden:", proj_hidden)
+        print("proj_dim:", proj_dim)
+        print("dropout:", dropout)
+        effective_hidden = proj_hidden if proj_hidden is not None else 512
         self.projector = _mlp(
-            feat_dim,
-            2048,
-            proj_dim,
+            in_dim=feat_dim,
+            hidden_dim=effective_hidden,
+            out_dim=proj_dim,
+            num_layers=2 ,  # 2048 -> 2048 -> 2048 新模型
             bn_last=True,
             dropout=dropout
         )
+        print(self.projector)
 
         # 3. 建立 Predictor (預測頭)
         # 這是 SimSiam 與其他 SSL 方法最大的不同點，用於匹配另一視角的輸出

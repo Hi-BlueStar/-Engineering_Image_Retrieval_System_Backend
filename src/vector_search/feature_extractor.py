@@ -88,6 +88,9 @@ class SimSiamFeatureExtractor:
                 ckpt = torch.load(model_path, map_location="cpu") # Load to CPU for inspection
                 state_dict = ckpt.get('state_dict', ckpt)
 
+                # 移除 _orig_mod. 前綴
+                state_dict = {k.replace('_orig_mod.', ''): v for k, v in state_dict.items()}
+
                 # Check conv1 weight shape: [Out, In, K, K]
                 # Usually backbone.conv1.weight
                 if 'backbone.conv1.weight' in state_dict:
@@ -116,7 +119,7 @@ class SimSiamFeatureExtractor:
 
         # 初始化模型架構
         # 注意: in_channels 需依據實際模型訓練設定
-        self.model = SimSiam(backbone=backbone, in_channels=in_channels)
+        self.model = SimSiam(backbone=backbone, proj_dim=2048, pred_hidden=512, in_channels=in_channels)
 
         if model_path:
             self._load_weights(model_path)
@@ -137,6 +140,9 @@ class SimSiamFeatureExtractor:
 
             # 處理 checkpoint 可能包含 'state_dict' 鍵值的情況
             state_dict = checkpoint.get('state_dict', checkpoint)
+
+            # 移除 _orig_mod. 前綴 (這是 torch.compile 產生的前綴)
+            state_dict = {k.replace('_orig_mod.', ''): v for k, v in state_dict.items()}
 
             # 使用 strict=False 允許部分鍵值不匹配 (例如多了 predictor 以外的層)
             # 但 SimSiam 應該完全匹配
