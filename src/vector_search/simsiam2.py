@@ -208,6 +208,7 @@ class SimSiam(nn.Module):
         print("proj_dim:", proj_dim)
         print("dropout:", dropout)
         effective_hidden = proj_hidden if proj_hidden is not None else 512
+        effective_hidden = 2048
         self.projector = _mlp(
             in_dim=feat_dim,
             hidden_dim=effective_hidden,
